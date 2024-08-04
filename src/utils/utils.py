@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import os
 import cv2
+import numpy as np
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
 
 def plot_history(history):
     h = history.history
@@ -18,52 +20,35 @@ def plot_history(history):
     print('Train Acc     ', h['accuracy'][-1])
     print('Validation Acc', h['val_accuracy'][-1])
 
-def preprocess_images(input_dir, output_hr_dir, output_lr_dir, scale_factor=4):
+def load_and_preprocess_image(img_path, scale_factor=4):
     """
-    Preprocess images by creating high-resolution (HR) and low-resolution (LR) pairs.
+    Load an image and generate its low-resolution (LR) version on-the-fly.
 
-    :param input_dir: Directory containing the original images.
-    :param output_hr_dir: Directory to save the high-resolution images.
-    :param output_lr_dir: Directory to save the low-resolution images.
-    :param scale_factor: Factor by which to downscale the images to create LR images.
+    :param img_path: Path to the high-resolution (HR) image.
+    :param scale_factor: Factor by which to downscale the image to create an LR image.
+    :return: Tuple of (LR image, HR image)
     """
-    if not os.path.exists(output_hr_dir):
-        os.makedirs(output_hr_dir)
-    if not os.path.exists(output_lr_dir):
-        os.makedirs(output_lr_dir)
+    hr_img = img_to_array(load_img(img_path)) / 255.0  # Normalize pixel values
+    lr_img = cv2.resize(hr_img, (hr_img.shape[1] // scale_factor, hr_img.shape[0] // scale_factor), interpolation=cv2.INTER_CUBIC)
+    lr_img = cv2.resize(lr_img, (hr_img.shape[1], hr_img.shape[0]), interpolation=cv2.INTER_CUBIC)
+    return lr_img, hr_img
 
-    for img_name in os.listdir(input_dir):
-        img_path = os.path.join(input_dir, img_name)
-        img = cv2.imread(img_path)
-        if img is not None:
-            # Save HR image (same as original)
-            hr_img = img
-            cv2.imwrite(os.path.join(output_hr_dir, img_name), hr_img)
+def generate_batches(image_dir, batch_size, scale_factor=4):
+    """
+    Generator that yields batches of LR and HR images.
 
-            # Create LR image
-            lr_img = cv2.resize(hr_img, (hr_img.shape[1] // scale_factor, hr_img.shape[0] // scale_factor), interpolation=cv2.INTER_CUBIC)
-            lr_img = cv2.resize(lr_img, (hr_img.shape[1], hr_img.shape[0]), interpolation=cv2.INTER_CUBIC)
-            cv2.imwrite(os.path.join(output_lr_dir, img_name), lr_img)
-
-import os
-import numpy as np
-from tensorflow.keras.preprocessing.image import img_to_array, load_img
-
-def load_image_data(lr_dir, hr_dir):
-    lr_images = []
-    hr_images = []
-
-    for img_name in os.listdir(lr_dir):
-        lr_img_path = os.path.join(lr_dir, img_name)
-        hr_img_path = os.path.join(hr_dir, img_name)
-
-        lr_img = img_to_array(load_img(lr_img_path))
-        hr_img = img_to_array(load_img(hr_img_path))
-
-        lr_images.append(lr_img)
-        hr_images.append(hr_img)
-
-    lr_images = np.array(lr_images) / 255.0
-    hr_images = np.array(hr_images) / 255.0
-
-    return lr_images, hr_images
+    :param image_dir: Directory containing the high-resolution images.
+    :param batch_size: Number of images per batch.
+    :param scale_factor: Factor by which to downscale images to create LR images.
+    :yield: Tuple of (batch of LR images, batch of HR images)
+    """
+    image_paths = [os.path.join(image_dir, img_name) for img_name in os.listdir(image_dir)]
+    while True:
+        lr_batch = []
+        hr_batch = []
+        for _ in range(batch_size):
+            img_path = np.random.choice(image_paths)
+            lr_img, hr_img = load_and_preprocess_image(img_path, scale_factor)
+            lr_batch.append(lr_img)
+            hr_batch.append(hr_img)
+        yield np.array(lr_batch), np.array(hr_batch)

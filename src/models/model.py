@@ -12,7 +12,3 @@ def build_sr_model():
 
     model = Model(inputs, x)
     return model
-
-# Build the model
-model = build_sr_model()
-model.summary()
