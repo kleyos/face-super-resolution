@@ -3,52 +3,52 @@ import matplotlib.pyplot as plt
 import os
 import cv2
 import numpy as np
-from tensorflow.keras.preprocessing.image import img_to_array, load_img
+from tensorflow.keras.preprocessing.image import img_to_array, load_img, ImageDataGenerator
+
 
 def plot_history(history):
     h = history.history
     epochs = range(len(h['loss']))
 
-    plt.subplot(121), plt.plot(epochs, h['loss'], '.-', epochs, h['val_loss'], '.-')
-    plt.grid(True), plt.xlabel('epochs'), plt.ylabel('loss')
-    plt.legend(['Train', 'Validation'])
-    plt.subplot(122), plt.plot(epochs, h['accuracy'], '.-',
-                               epochs, h['val_accuracy'], '.-')
-    plt.grid(True), plt.xlabel('epochs'), plt.ylabel('Accuracy')
-    plt.legend(['Train', 'Validation'])
+    # Plot training & validation loss values
+    plt.figure(figsize=(8, 5))
 
-    print('Train Acc     ', h['accuracy'][-1])
-    print('Validation Acc', h['val_accuracy'][-1])
+    plt.plot(epochs, h['loss'], 'b', label='Training loss')
+    plt.plot(epochs, h['val_loss'], 'r', label='Validation loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
 
-def load_and_preprocess_image(img_path, scale_factor=4):
+    plt.tight_layout()
+    plt.show()
+
+def generate_batches(hr_dir, batch_size, lr_target_size=(128, 128), hr_target_size=(512, 512), scale=4):
     """
-    Load an image and generate its low-resolution (LR) version on-the-fly.
+    Generator that yields low-resolution and high-resolution image pairs on-the-fly.
 
-    :param img_path: Path to the high-resolution (HR) image.
-    :param scale_factor: Factor by which to downscale the image to create an LR image.
-    :return: Tuple of (LR image, HR image)
-    """
-    hr_img = img_to_array(load_img(img_path)) / 255.0  # Normalize pixel values
-    lr_img = cv2.resize(hr_img, (hr_img.shape[1] // scale_factor, hr_img.shape[0] // scale_factor), interpolation=cv2.INTER_CUBIC)
-    lr_img = cv2.resize(lr_img, (hr_img.shape[1], hr_img.shape[0]), interpolation=cv2.INTER_CUBIC)
-    return lr_img, hr_img
-
-def generate_batches(image_dir, batch_size, scale_factor=4):
-    """
-    Generator that yields batches of LR and HR images.
-
-    :param image_dir: Directory containing the high-resolution images.
+    :param hr_dir: Directory containing high-resolution images.
     :param batch_size: Number of images per batch.
-    :param scale_factor: Factor by which to downscale images to create LR images.
-    :yield: Tuple of (batch of LR images, batch of HR images)
+    :param lr_target_size: Target size for low-resolution images.
+    :param hr_target_size: Target size for high-resolution images.
+    :param scale: Downscale factor for generating low-resolution images.
+    :return: Yields batches of (low-resolution images, high-resolution images).
     """
-    image_paths = [os.path.join(image_dir, img_name) for img_name in os.listdir(image_dir)]
+    datagen = ImageDataGenerator(rescale=1./255)
+
+    hr_generator = datagen.flow_from_directory(
+        hr_dir,
+        target_size=hr_target_size,  # Load HR images at the original size
+        batch_size=batch_size,
+        class_mode=None,
+        shuffle=True,
+        classes=['.']
+    )
+
     while True:
-        lr_batch = []
-        hr_batch = []
-        for _ in range(batch_size):
-            img_path = np.random.choice(image_paths)
-            lr_img, hr_img = load_and_preprocess_image(img_path, scale_factor)
-            lr_batch.append(lr_img)
-            hr_batch.append(hr_img)
-        yield np.array(lr_batch), np.array(hr_batch)
+        hr_batch = hr_generator.next()
+
+        # On-the-fly downscale to create low-resolution images
+        lr_batch = np.array([cv2.resize(img, lr_target_size, interpolation=cv2.INTER_CUBIC) for img in hr_batch])
+
+        yield lr_batch, hr_batch
