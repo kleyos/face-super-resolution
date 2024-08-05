@@ -1,22 +1,13 @@
-import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, UpSampling2D, Input
-from tensorflow.keras.models import Model
+from tensorflow.keras import layers, models
 
+def build_srcnn_model():
+    model = models.Sequential()
+    model.add(layers.Conv2D(64, (9, 9), activation='relu', padding='same', input_shape=(None, None, 3)))
+    model.add(layers.Conv2D(32, (5, 5), activation='relu', padding='same'))
+    model.add(layers.Conv2D(3, (5, 5), padding='same'))
 
-def build_sr_model(input_shape=(128, 128, 3)):
-    """
-    Build a simple super-resolution model.
-
-    :param input_shape: Shape of the input low-resolution image.
-    :return: Compiled Keras model.
-    """
-    inputs = Input(shape=input_shape)
-    x = Conv2D(64, (3, 3), activation='relu', padding='same')(inputs)
-    x = UpSampling2D(size=(2, 2))(x)  # Upscale to 256x256
-    x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
-    x = UpSampling2D(size=(2, 2))(x)  # Upscale to 512x512
-    x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)  # Output layer, should match HR dimensions
-
-    model = Model(inputs, x)
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse'])
     return model
+
+model = build_srcnn_model()
+model.summary()
