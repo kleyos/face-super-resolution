@@ -82,14 +82,14 @@ def plot_training_history(history):
     plt.ylabel('Loss')
     plt.legend()
 
-    # Plot MSE (or other metrics)
+    # Plot PSNR
     plt.subplot(1, 2, 2)
-    plt.plot(history.history['mse'], label='Training MSE')
-    if 'val_mse' in history.history:
-        plt.plot(history.history['val_mse'], label='Validation MSE')
-    plt.title('MSE over Epochs')
+    plt.plot(history.history['psnr_metric'], label='Training PSNR')
+    if 'val_psnr_metric' in history.history:
+        plt.plot(history.history['val_psnr_metric'], label='Validation PSNR')
+    plt.title('PSNR over Epochs')
     plt.xlabel('Epochs')
-    plt.ylabel('MSE')
+    plt.ylabel('PSNR')
     plt.legend()
 
     plt.show()
