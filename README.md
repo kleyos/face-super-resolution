@@ -1,2 +1,4 @@
 # face-super-resolution
-A super-resolution system that enhances the spatial resolution of images, specifically focusing on human faces
+Face Hallucination (Face Super Resolution), which focuses on improving the resolution of low-quality facial images to make them sharper and more detailed. The process of super resolution involves reconstructing a high-quality version of a low-resolution image using various techniques, including neural networks such as convolutional neural networks (CNNs) and other deep learning approaches.
+# description
+In this project, we implemented the SRCNN architecture for face hallucination, a super-resolution application for human faces. The model was trained on the LFW dataset using MSE loss and PSNR as a quality metric. The final model demonstrated improved clarity and detail compared to traditional methods and was showcased in a live demo for real-time facial image enhancement.
